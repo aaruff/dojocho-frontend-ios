@@ -13,12 +13,11 @@ struct User: Hashable, Codable {
     let name: String
 }
 
-class UserCollection: ObservableObject {
+class UsersCache: ObservableObject {
     @Published var users: [User] = []
     
-    func fetch() {
+    func loadUsers() {
         guard let url = URL(string: "http://127.0.0.1:8000/users") else {
-            print("Invalid URL")
             return
         }
         
@@ -30,27 +29,25 @@ class UserCollection: ObservableObject {
                     DispatchQueue.main.async {
                         self.users = users
                     }
-                    
-                    return
-                }
-                else {
-                    print("Failed to decode response from data")
                 }
             }
-            else {
-                print("Fetch failed: \(error?.localizedDescription ?? "Unknown Error")")
-            }
-            print(self.users)
         }
         .resume()
-        
+    }
+    
+    func emails() -> [String] {
+        var userEmails = [String]()
+        for user in users {
+            userEmails.append(user.email)
+        }
+       return userEmails
     }
 }
 
 
 struct ContentView: View {
     @State var email = ""
-    @StateObject var userCollection = UserCollection()
+    @StateObject var userCollection = UsersCache()
     
     var body: some View {
         VStack {
@@ -61,8 +58,11 @@ struct ContentView: View {
                 print(userCollection.users)
             }
             .buttonStyle(.bordered)
+            List(userCollection.emails(), id: \.self) { email in
+                Text(email)
+            }
         }
-        .onAppear(perform: userCollection.fetch)
+        .onAppear(perform: userCollection.loadUsers)
     }
     
 }
